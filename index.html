@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f2f2f7">
+<title>مسیر کار — تهران</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff;--sheet:rgba(255,255,255,.88);--ink:#1c1c1e;--mute:#6e6e73;--line:rgba(0,0,0,.08);--blue:#0a84ff;--fill:#f2f2f7;--red:#ff3b30;--green:#30a14e}
+@media(prefers-color-scheme:dark){:root{--bg:#000;--sheet:rgba(28,28,30,.88);--ink:#f5f5f7;--mute:#98989f;--line:rgba(255,255,255,.1);--fill:#2c2c2e;--blue:#4da3ff}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;font-family:Vazirmatn,system-ui,Tahoma,sans-serif;color:var(--ink);background:var(--bg)}
+#map{position:fixed;inset:0}
+.top{position:fixed;z-index:1000;top:calc(env(safe-area-inset-top,0px) + 10px);left:10px;right:10px;display:flex;flex-direction:column;gap:6px}
+.bar,.sheet{background:var(--sheet);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);box-shadow:0 4px 24px rgba(0,0,0,.18)}
+.bar{display:flex;align-items:center;gap:8px;border-radius:14px;padding:4px 12px}
+.bar input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:16px;color:var(--ink);padding:10px 0;outline:none}
+.seg{display:flex;background:var(--fill);border-radius:9px;padding:2px;font-size:12px}
+.seg button{border:0;background:none;font:inherit;color:var(--mute);padding:5px 10px;border-radius:7px}
+.seg button.on{background:var(--bg);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.res{border-radius:14px;overflow:hidden;display:none;max-height:40vh;overflow-y:auto}
+.res div{padding:11px 14px;border-bottom:1px solid var(--line);font-size:14px}
+.sheet{position:fixed;z-index:1000;left:0;right:0;bottom:0;border-radius:22px 22px 0 0;padding:8px 16px calc(env(safe-area-inset-bottom,0px) + 14px);max-height:60vh;overflow-y:auto}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 10px;background:var(--mute);opacity:.4}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px}
+.chip{flex:none;border:0;font:inherit;font-size:13px;padding:7px 12px;border-radius:999px;background:var(--fill);color:var(--mute)}
+.chip.on{background:var(--blue);color:#fff}
+.routes{display:flex;flex-direction:column;gap:8px}
+.r{display:flex;align-items:baseline;gap:10px;padding:12px 14px;border-radius:14px;background:var(--fill);border:2px solid transparent}
+.r.sel{border-color:var(--blue)}
+.r b{font-size:20px}.r span{color:var(--mute);font-size:13px}
+.r em{margin-inline-start:auto;font-style:normal;font-size:12px;color:var(--blue)}
+.go{width:100%;margin-top:10px;border:0;border-radius:14px;padding:14px;font:inherit;font-size:16px;font-weight:700;background:var(--blue);color:#fff}
+.row{display:flex;gap:8px;margin-top:8px}
+.row button{flex:1;border:0;border-radius:12px;padding:11px;font:inherit;font-size:14px;background:var(--fill);color:var(--ink)}
+.msg{font-size:13px;color:var(--mute);padding:6px 2px;line-height:1.8}.msg.err{color:var(--red)}
+.pin{width:22px;height:22px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.leaflet-control-zoom{display:none}
+.leaflet-control-attribution{font-size:9px!important;margin-bottom:0!important;opacity:.8}
+.leaflet-bottom{bottom:62vh}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="top">
+  <div class="bar">
+    <input id="q" placeholder="جستجوی مقصد…" enterkeyhint="search" autocomplete="off">
+    <div class="seg"><button id="tD" class="on">مقصد</button><button id="tO">مبدأ</button></div>
+  </div>
+  <div class="bar res" id="res" style="padding:0"></div>
+</div>
+<div class="sheet">
+  <div class="grab"></div>
+  <div class="chips">
+    <button class="chip on" id="zT">دوری از طرح ترافیک</button>
+    <button class="chip on" id="zA">دوری از طرح کاهش آلودگی</button>
+    <button class="chip" id="zS">نمایش محدوده‌ها</button>
+  </div>
+  <div class="msg" id="msg">مقصد را جستجو کنید، یا روی نقشه بزنید. مبدأ از GPS گرفته می‌شود.</div>
+  <div class="routes" id="routes"></div>
+  <button class="go" id="work" style="display:none">مسیر تا محل کار</button>
+  <div class="row"><button id="save">ذخیره مقصد به‌عنوان محل کار</button><button id="gps">موقعیت من</button></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ---- محدوده‌ها: مختصات تقریبی [lon,lat] — برای دقت، با نقشهٔ رسمی شهرداری تطبیق بدهید ----
+const ZONES = {
+  traffic:  [[51.365,35.706],[51.395,35.714],[51.425,35.711],[51.440,35.698],[51.436,35.680],[51.408,35.671],[51.378,35.678]],
+  pollution:[[51.335,35.725],[51.400,35.735],[51.455,35.725],[51.465,35.680],[51.450,35.645],[51.380,35.635],[51.335,35.655]]
+};
+const ROUTER = 'https://valhalla1.openstreetmap.de/route';
+const $ = id => document.getElementById(id);
+const fa = n => Number(n).toLocaleString('fa-IR');
+const dark = matchMedia('(prefers-color-scheme:dark)').matches;
+
+const map = L.map('map',{zoomControl:false}).setView([35.7, 51.39],12);
+L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/${dark?'dark_all':'voyager'}/{z}/{x}/{y}{r}.png`,
+  {maxZoom:19,attribution:'© OpenStreetMap, © CARTO'}).addTo(map);
+
+const st = {org:null, dst:null, target:'dst', avoidT:true, avoidA:true, routes:[], sel:0};
+try{ const w = JSON.parse(localStorage.getItem('work')||'null'); if(w){ st.dst=w; $('work').style.display='block'; } }catch(e){}
+
+const zoneLayers = Object.entries(ZONES).map(([k,p])=>L.polygon(p.map(([x,y])=>[y,x]),
+  {color:k==='traffic'?'#ff3b30':'#ff9500',weight:2,fillOpacity:.12,interactive:false}));
+let zonesOn=false;
+
+const dot = c => L.divIcon({className:'',html:`<div class="pin" style="background:${c}"></div>`,iconSize:[22,22],iconAnchor:[11,11]});
+let mO,mD,lines=[];
+function drawPins(){
+  [mO,mD].forEach(m=>m&&map.removeLayer(m));
+  if(st.org) mO=L.marker(st.org,{icon:dot('#0a84ff')}).addTo(map);
+  if(st.dst) mD=L.marker(st.dst,{icon:dot('#ff3b30')}).addTo(map);
+}
+drawPins();
+
+function dec(s){let i=0,a=0,b=0,o=[];while(i<s.length){let c,sh=0,r=0;do{c=s.charCodeAt(i++)-63;r|=(c&31)<<sh;sh+=5}while(c>=32);a+=(r&1)?~(r>>1):r>>1;sh=0;r=0;do{c=s.charCodeAt(i++)-63;r|=(c&31)<<sh;sh+=5}while(c>=32);b+=(r&1)?~(r>>1):r>>1;o.push([a/1e6,b/1e6])}return o}
+
+function msg(t,err){const m=$('msg');m.textContent=t;m.className='msg'+(err?' err':'');m.style.display=t?'block':'none'}
+
+async function route(){
+  if(!st.dst){msg('مقصد را مشخص کنید.');return}
+  if(!st.org){msg('در حال گرفتن موقعیت شما…');await locate(true);if(!st.org)return}
+  msg('در حال مسیریابی…');$('routes').innerHTML='';
+  const ex=[]; if(st.avoidT)ex.push(ZONES.traffic); if(st.avoidA)ex.push(ZONES.pollution);
+  const body={locations:[{lat:st.org[0],lon:st.org[1]},{lat:st.dst[0],lon:st.dst[1]}],costing:'auto',
+    costing_options:{auto:{exclude_polygons:ex}},alternates:2,directions_options:{units:'kilometers',language:'fa-IR'}};
+  try{
+    const r=await fetch(ROUTER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const j=await r.json();
+    if(!r.ok||!j.trip) throw new Error(j.error||'خطا');
+    const all=[j,...(j.alternates||[])].map(x=>x.trip||x);
+    st.routes=all.map(t=>({pts:dec(t.legs[0].shape),min:t.summary.time/60,km:t.summary.length}));
+    st.sel=0; msg(''); show();
+  }catch(e){
+    msg('مسیری پیدا نشد. اگر مبدأ یا مقصد داخل طرح است، گزینهٔ دوری از آن طرح را خاموش کنید.',true);
+  }
+}
+function show(){
+  lines.forEach(l=>map.removeLayer(l));lines=[];
+  st.routes.forEach((r,i)=>{ if(i===st.sel)return;
+    const l=L.polyline(r.pts,{color:'#8e8e93',weight:6,opacity:.8}).addTo(map);
+    l.on('click',()=>{st.sel=i;show()});lines.push(l)});
+  const s=st.routes[st.sel];
+  lines.push(L.polyline(s.pts,{color:'#fff',weight:11}).addTo(map), L.polyline(s.pts,{color:'#0a84ff',weight:7}).addTo(map));
+  map.fitBounds(L.polyline(s.pts).getBounds(),{paddingTopLeft:[30,90],paddingBottomRight:[30,Math.round(innerHeight*.45)]});
+  $('routes').innerHTML=st.routes.map((r,i)=>`<div class="r ${i===st.sel?'sel':''}" data-i="${i}"><b>${fa(Math.round(r.min))} دقیقه</b><span>${fa(r.km.toFixed(1))} کیلومتر</span>${i===0?'<em>پیشنهادی</em>':''}</div>`).join('');
+  document.querySelectorAll('.r').forEach(e=>e.onclick=()=>{st.sel=+e.dataset.i;show()});
+}
+
+function locate(quiet){
+  return new Promise(res=>{
+    if(!navigator.geolocation){msg('مرورگر از موقعیت‌یابی پشتیبانی نمی‌کند.',true);return res()}
+    navigator.geolocation.getCurrentPosition(p=>{st.org=[p.coords.latitude,p.coords.longitude];drawPins();
+      if(!quiet)map.setView(st.org,15);res()},
+      ()=>{msg('دسترسی به موقعیت داده نشد. مبدأ را از دکمهٔ «مبدأ» جستجو کنید یا روی نقشه بزنید.',true);res()},
+      {enableHighAccuracy:true,timeout:10000});
+  });
+}
+
+// جستجو (Nominatim)
+let tm;
+$('q').addEventListener('input',()=>{clearTimeout(tm);const v=$('q').value.trim();
+  if(v.length<3){$('res').style.display='none';return}
+  tm=setTimeout(async()=>{
+    try{const u=`https://nominatim.openstreetmap.org/search?format=jsonv2&accept-language=fa&limit=6&countrycodes=ir&viewbox=51.1,35.85,51.7,35.5&bounded=1&q=${encodeURIComponent(v)}`;
+      const a=await (await fetch(u)).json();
+      $('res').innerHTML=a.map(x=>`<div data-la="${x.lat}" data-lo="${x.lon}">${x.display_name.split('،').slice(0,3).join('،')}</div>`).join('')||'<div>نتیجه‌ای نبود</div>';
+      $('res').style.display='block';
+      $('res').querySelectorAll('div[data-la]').forEach(d=>d.onclick=()=>{pick([+d.dataset.la,+d.dataset.lo]);$('q').value='';$('res').style.display='none';$('q').blur()});
+    }catch(e){}
+  },500);
+});
+function pick(ll){ st[st.target]=ll; drawPins(); map.setView(ll,15); if(st.dst&&(st.org||st.target==='dst')) route(); }
+map.on('click',e=>pick([e.latlng.lat,e.latlng.lng]));
+
+$('tD').onclick=()=>{st.target='dst';$('tD').classList.add('on');$('tO').classList.remove('on')};
+$('tO').onclick=()=>{st.target='org';$('tO').classList.add('on');$('tD').classList.remove('on')};
+$('zT').onclick=e=>{st.avoidT=!st.avoidT;e.target.classList.toggle('on');if(st.dst)route()};
+$('zA').onclick=e=>{st.avoidA=!st.avoidA;e.target.classList.toggle('on');if(st.dst)route()};
+$('zS').onclick=e=>{zonesOn=!zonesOn;e.target.classList.toggle('on');zoneLayers.forEach(z=>zonesOn?z.addTo(map):map.removeLayer(z))};
+$('gps').onclick=async()=>{await locate();if(st.dst&&st.org)route()};
+$('save').onclick=()=>{if(!st.dst){msg('اول مقصد را مشخص کنید.');return}
+  localStorage.setItem('work',JSON.stringify(st.dst));$('work').style.display='block';msg('محل کار ذخیره شد.')};
+$('work').onclick=()=>{try{st.dst=JSON.parse(localStorage.getItem('work'))}catch(e){}drawPins();route()};
+if(st.dst){map.setView(st.dst,13)}
+</script>
+</body>
+</html>
