@@ -38,6 +38,7 @@ html,body{height:100%;margin:0;font-family:Vazirmatn,system-ui,Tahoma,sans-serif
 .msg{font-size:13px;color:var(--mute);padding:6px 2px;line-height:1.8}.msg.err{color:var(--red)}
 .pin{width:22px;height:22px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)}
 .leaflet-control-zoom{display:none}
+.dk{filter:invert(1) hue-rotate(180deg) brightness(.95) contrast(.9) saturate(.8)}
 .leaflet-control-attribution{font-size:9px!important;margin-bottom:0!important;opacity:.8}
 .leaflet-bottom{bottom:62vh}
 </style>
@@ -77,8 +78,8 @@ const fa = n => Number(n).toLocaleString('fa-IR');
 const dark = matchMedia('(prefers-color-scheme:dark)').matches;
 
 const map = L.map('map',{zoomControl:false}).setView([35.7, 51.39],12);
-L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/${dark?'dark_all':'voyager'}/{z}/{x}/{y}{r}.png`,
-  {maxZoom:19,attribution:'© OpenStreetMap, © CARTO'}).addTo(map);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {maxZoom:19,className:dark?'dk':'',attribution:'© OpenStreetMap'}).addTo(map);
 
 const st = {org:null, dst:null, target:'dst', avoidT:true, avoidA:true, routes:[], sel:0};
 try{ const w = JSON.parse(localStorage.getItem('work')||'null'); if(w){ st.dst=w; $('work').style.display='block'; } }catch(e){}
