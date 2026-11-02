@@ -39,7 +39,10 @@ html,body{height:100%;margin:0;font-family:Vazirmatn,system-ui,Tahoma,sans-serif
 .row button{flex:1;border:0;border-radius:12px;padding:11px;font:inherit;font-size:14px;background:var(--fill);color:var(--ink)}
 .msg{font-size:13px;color:var(--mute);padding:6px 2px;line-height:1.8}.msg.err{color:var(--red)}
 .pin{width:22px;height:22px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)}
-.car{width:46px;height:46px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))}
+.car{position:relative;width:64px;height:64px}
+.car .halo{position:absolute;inset:6px;border-radius:50%;background:rgba(10,132,255,.28);animation:pulse 2s ease-out infinite}
+.car svg{position:absolute;inset:0;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))}
+@keyframes pulse{0%{transform:scale(.7);opacity:.9}100%{transform:scale(1.5);opacity:0}}
 /* حالت رانندگی — شبیه Apple Maps */
 #nb,#nf,#spd{display:none;position:fixed;z-index:1001;color:#fff}
 #nb{top:calc(env(safe-area-inset-top,0px) + 8px);left:8px;right:8px;background:rgba(28,28,30,.94);border-radius:20px;padding:10px 16px 12px;box-shadow:0 6px 24px rgba(0,0,0,.4);flex-direction:column;gap:8px}
@@ -51,9 +54,18 @@ html,body{height:100%;margin:0;font-family:Vazirmatn,system-ui,Tahoma,sans-serif
 #nd{font-size:30px;font-weight:700}#nt{font-size:15px;opacity:.9}
 #nf{bottom:calc(env(safe-area-inset-bottom,0px) + 8px);left:8px;right:8px;background:rgba(28,28,30,.94);border-radius:20px;padding:12px 16px;align-items:center;justify-content:space-between;box-shadow:0 4px 24px rgba(0,0,0,.4)}
 #nf .c{text-align:center}#nf .c b{display:block;font-size:22px}#nf .c span{font-size:12px;opacity:.7}
-#nf button{border:0;border-radius:12px;padding:10px 14px;font:inherit;background:rgba(255,255,255,.14);color:#fff;font-size:18px}
-#nf #end{background:var(--red);font-size:15px;font-weight:700}
-#spd{bottom:calc(env(safe-area-inset-bottom,0px) + 100px);right:12px;width:62px;height:62px;border-radius:50%;background:rgba(28,28,30,.94);flex-direction:column;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+#fab{display:none;position:fixed;z-index:1002;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 100px);flex-direction:column;gap:10px;align-items:flex-end}
+body.nav #fab{display:flex}
+.fx{display:flex;align-items:center;gap:8px}
+.fb{width:52px;height:52px;border-radius:50%;border:0;font-size:22px;color:#fff;background:rgba(28,28,30,.94);box-shadow:0 4px 14px rgba(0,0,0,.4);transition:transform .15s}
+.fx.open .fb{transform:scale(.92);background:#3a3a3c}
+.opts{display:none;gap:4px;background:rgba(28,28,30,.96);border-radius:999px;padding:5px;box-shadow:0 4px 14px rgba(0,0,0,.4);animation:pop .15s ease-out}
+.fx.open .opts{display:flex}
+@keyframes pop{from{opacity:0;transform:translateX(12px) scale(.9)}to{opacity:1;transform:none}}
+.opts button{border:0;border-radius:999px;padding:9px 14px;font:inherit;font-size:14px;color:#fff;background:transparent;white-space:nowrap}
+.opts button.on{background:rgba(255,255,255,.2)}
+.opts #end{background:var(--red);font-weight:700}
+#spd{bottom:calc(env(safe-area-inset-bottom,0px) + 100px);left:12px;width:62px;height:62px;border-radius:50%;background:rgba(28,28,30,.94);flex-direction:column;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.4)}
 #spd b{font-size:22px;line-height:1}#spd span{font-size:10px;opacity:.7}
 body.nav .top,body.nav .sheet{display:none}body.nav #nb,body.nav #nf,body.nav #spd{display:flex}
 body.nav .maplibregl-ctrl-bottom-right,body.nav .maplibregl-ctrl-bottom-left{display:none}
@@ -83,7 +95,8 @@ body.nav .maplibregl-ctrl-bottom-right,body.nav .maplibregl-ctrl-bottom-left{dis
 </div>
 <div id="nb"><div id="lanes"></div><div class="m"><div id="nic">↑</div><div><div id="nd">—</div><div id="nt">در حال دریافت موقعیت…</div></div></div></div>
 <div id="spd"><b id="sv">۰</b><span>km/h</span></div>
-<div id="nf"><div class="c"><b id="na">—</b><span>رسیدن</span></div><div class="c"><b id="nm">—</b><span>دقیقه</span></div><div class="c"><b id="nk">—</b><span>کیلومتر</span></div><button id="mute">🔊</button><button id="end">پایان</button></div>
+<div id="nf"><div class="c"><b id="na">—</b><span>رسیدن</span></div><div class="c"><b id="nm">—</b><span>دقیقه</span></div><div class="c"><b id="nk">—</b><span>کیلومتر</span></div></div>
+<div id="fab"><div class="fx"><button class="fb" id="rc" style="display:none;background:#0a6cff">➤</button></div><div class="fx" id="vx"><button class="fb" id="vb">🔊</button><div class="opts"><button data-v="on" class="on">صدا</button><button data-v="alerts">فقط هشدار</button><button data-v="off">بی‌صدا</button></div></div><div class="fx" id="ex"><button class="fb" id="eb">✕</button><div class="opts"><button id="end">پایان مسیر</button></div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
@@ -144,7 +157,7 @@ async function route(silent){
     if(!r.ok||!j.trip)throw new Error(j.error||'خطا');
     st.routes=[j,...(j.alternates||[])].map(x=>x.trip||x).map(t=>({pts:dec(t.legs[0].shape),min:t.summary.time/60,km:t.summary.length,man:t.legs[0].maneuvers||[]}));
     st.sel=0;msg('');
-    if(nav&&silent){beginNav();say('مسیر جدید');return}
+    if(nav&&silent){beginNav();say('مسیر جدید',1);return}
     show();
   }catch(e){
     msg('مسیری پیدا نشد ('+(e.message||'خطای شبکه')+'). اگر مبدأ یا مقصد داخل طرح است، دوری از آن طرح را خاموش کنید.',true);
@@ -198,10 +211,10 @@ $('save').onclick=()=>{if(!st.dst){msg('اول مقصد را مشخص کنید.'
 $('work').onclick=()=>{try{st.dst=JSON.parse(localStorage.getItem('work'))}catch(e){}drawPins();route()};
 
 // ---------- مسیریابی لحظه‌ای (سه‌بعدی، شبیه Apple Maps) ----------
-let nav=null,W=null,wl=null,muted=false,sim=null,car=null,lastBr=0;
+let lastTouch=0,nav=null,W=null,wl=null,voice='on',sim=null,car=null,lastBr=0;
 const hav=(a,b)=>{const R=6371000,r=Math.PI/180,dl=(b[0]-a[0])*r,dn=(b[1]-a[1])*r,x=Math.sin(dl/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
 const brg=(a,b)=>{const r=Math.PI/180,dn=(b[1]-a[1])*r,y=Math.sin(dn)*Math.cos(b[0]*r),x=Math.cos(a[0]*r)*Math.sin(b[0]*r)-Math.sin(a[0]*r)*Math.cos(b[0]*r)*Math.cos(dn);return(Math.atan2(y,x)/r+360)%360};
-function say(t){if(muted||!window.speechSynthesis)return;try{const u=new SpeechSynthesisUtterance(t);u.lang='fa-IR';speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+function say(t,imp){if(voice==='off'||(voice==='alerts'&&!imp)||!window.speechSynthesis)return;try{const u=new SpeechSynthesisUtterance(t);u.lang='fa-IR';speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
 const PH={1:'حرکت کنید',2:'حرکت کنید',3:'حرکت کنید',4:'به مقصد می‌رسید',5:'به مقصد می‌رسید',6:'به مقصد می‌رسید',8:'مستقیم ادامه دهید',9:'کمی به راست بپیچید',10:'به راست بپیچید',11:'کاملاً به راست بپیچید',12:'دور بزنید',13:'دور بزنید',14:'کاملاً به چپ بپیچید',15:'به چپ بپیچید',16:'کمی به چپ بپیچید',17:'از رمپ مستقیم بروید',18:'از رمپ سمت راست بروید',19:'از رمپ سمت چپ بروید',20:'از خروجی سمت راست خارج شوید',21:'از خروجی سمت چپ خارج شوید',22:'مستقیم ادامه دهید',23:'سمت راست بمانید',24:'سمت چپ بمانید',25:'به مسیر ملحق شوید',26:'وارد میدان شوید',27:'از میدان خارج شوید',37:'به مسیر ملحق شوید',38:'به مسیر ملحق شوید'};
 const IC=t=>[9,10,11,18,20,23,37].includes(t)?'↱':[14,15,16,19,21,24,38].includes(t)?'↰':[12,13].includes(t)?'↶':[4,5,6].includes(t)?'⚑':[26,27].includes(t)?'⭯':'↑';
 const fd=m=>m>=1000?fa((m/1000).toFixed(1))+' کیلومتر':fa(Math.max(10,Math.round(m/10)*10))+' متر';
@@ -215,8 +228,15 @@ function showLanes(m){
 }
 function carEl(){
   const d=document.createElement('div');d.className='car';
-  d.innerHTML='<svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="21" fill="#0a84ff" stroke="#fff" stroke-width="3"/><path d="M23 9 L33 33 L23 28 L13 33 Z" fill="#fff"/></svg>';return d;
+  d.innerHTML='<div class="halo"></div><svg viewBox="0 0 64 64"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5eb0ff"/><stop offset="1" stop-color="#0a6cff"/></linearGradient></defs><path d="M32 6 C33.6 6 34.8 6.9 35.6 8.5 L50.5 49 C51.4 51.5 49 53.7 46.6 52.5 L32 44.6 L17.4 52.5 C15 53.7 12.6 51.5 13.5 49 L28.4 8.5 C29.2 6.9 30.4 6 32 6 Z" fill="url(#cg)" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke"/><path d="M32 14 L43 47 L32 41.5 Z" fill="rgba(255,255,255,.28)"/></svg>';return d;
 }
+function recenter(d){
+  if(!nav||!nav.cam)return;const[sp,br]=nav.cam;
+  $('rc').style.display='none';
+  map.easeTo({center:[sp[1],sp[0]],bearing:br,pitch:62,zoom:17.3,offset:[0,Math.round(innerHeight*.2)],duration:d,easing:x=>x});
+}
+['dragstart','zoomstart','rotatestart','pitchstart'].forEach(ev=>map.on(ev,e=>{if(nav&&e.originalEvent){lastTouch=Date.now();$('rc').style.display='block'}}));
+$('rc').onclick=()=>{lastTouch=0;recenter(600)};
 function beginNav(){
   const r=st.routes[st.sel],cum=[0];
   for(let i=1;i<r.pts.length;i++)cum[i]=cum[i-1]+hav(r.pts[i-1],r.pts[i]);
@@ -227,7 +247,7 @@ function startNav(){
   if(!st.routes.length)return;
   beginNav();document.body.classList.add('nav');map.resize();drawPins();
   car=new maplibregl.Marker({element:carEl(),pitchAlignment:'viewport',rotationAlignment:'viewport'}).setLngLat([st.org[1],st.org[0]]).addTo(map);
-  say('مسیریابی شروع شد');
+  lastTouch=0;say('مسیریابی شروع شد',1);
   try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(x=>wl=x).catch(()=>{})}catch(e){}
   if(location.hash==='#sim'){let k=0;const p=nav.r.pts;sim=setInterval(()=>{k=Math.min(k+6,p.length-1);onPos({coords:{latitude:p[k][0],longitude:p[k][1],speed:14}})},700)}
   else W=navigator.geolocation.watchPosition(onPos,()=>{$('nt').textContent='سیگنال GPS ضعیف است'},{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
@@ -253,13 +273,14 @@ function onPos(p){
   }
   nav.off=0;nav.i=bk;st.org=ll;
   const prog=cum[bk]+bt*(cum[bk+1]-cum[bk]),rem=cum[n-1]-prog;
-  if(rem<30){say('به مقصد رسیدید');stopNav();msg('به مقصد رسیدید.');return}
+  if(rem<30){say('به مقصد رسیدید',1);stopNav();msg('به مقصد رسیدید.');return}
   // موقعیت خودرو روی مسیر قفل می‌شود و دماغه‌اش مسیر را نشان می‌دهد
   const sp=[pts[bk][0]+bt*(pts[bk+1][0]-pts[bk][0]),pts[bk][1]+bt*(pts[bk+1][1]-pts[bk][1])];
   let j=bk+1;while(j<n-1&&hav(sp,pts[j])<20)j++;
   const br=brg(sp,pts[j]);lastBr=br;
   car.setLngLat([sp[1],sp[0]]);
-  map.easeTo({center:[sp[1],sp[0]],bearing:br,pitch:62,zoom:17.3,offset:[0,Math.round(innerHeight*.2)],duration:900,easing:x=>x});
+  nav.cam=[sp,br];
+  if(Date.now()-lastTouch>5000)recenter(900);
   // راهنما
   const man=nav.r.man;let mi=man.findIndex((m,i)=>i>0&&m.begin_shape_index>bk);if(mi<0)mi=man.length-1;
   const m=man[mi],dm=Math.max(0,cum[Math.min(m.begin_shape_index,n-1)]-prog),ph=PH[m.type]||'مستقیم ادامه دهید',s0=(m.street_names||[])[0];
@@ -273,8 +294,15 @@ function onPos(p){
   $('sv').textContent=fa(Math.round((p.coords.speed||0)*3.6));
 }
 $('start').onclick=startNav;
-$('end').onclick=()=>{stopNav();show()};
-$('mute').onclick=e=>{muted=!muted;e.target.textContent=muted?'🔇':'🔊'};
+const closeFx=k=>document.querySelectorAll('.fx').forEach(f=>f!==k&&f.classList.remove('open'));
+$('vb').onclick=()=>{closeFx($('vx'));$('vx').classList.toggle('open')};
+$('eb').onclick=()=>{closeFx($('ex'));$('ex').classList.toggle('open')};
+document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{voice=b.dataset.v;
+  document.querySelectorAll('[data-v]').forEach(x=>x.classList.toggle('on',x===b));
+  $('vb').textContent=voice==='on'?'🔊':voice==='alerts'?'🔔':'🔇';$('vx').classList.remove('open');
+  if(voice==='off'){try{speechSynthesis.cancel()}catch(e){}}});
+$('end').onclick=()=>{$('ex').classList.remove('open');stopNav();show()};
+map.on('mousedown',()=>closeFx());
 </script>
 </body>
 </html>
