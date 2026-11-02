@@ -39,7 +39,8 @@ html,body{height:100%;margin:0;font-family:Vazirmatn,system-ui,Tahoma,sans-serif
 .row button{flex:1;border:0;border-radius:12px;padding:11px;font:inherit;font-size:14px;background:var(--fill);color:var(--ink)}
 .msg{font-size:13px;color:var(--mute);padding:6px 2px;line-height:1.8}.msg.err{color:var(--red)}
 .pin{width:22px;height:22px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)}
-.car{position:relative;width:64px;height:64px}
+.car{width:64px;height:64px}
+.cw{position:relative;width:64px;height:64px}
 .car .halo{position:absolute;inset:6px;border-radius:50%;background:rgba(10,132,255,.28);animation:pulse 2s ease-out infinite}
 .car svg{position:absolute;inset:0;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))}
 @keyframes pulse{0%{transform:scale(.7);opacity:.9}100%{transform:scale(1.5);opacity:0}}
@@ -228,7 +229,7 @@ function showLanes(m){
 }
 function carEl(){
   const d=document.createElement('div');d.className='car';
-  d.innerHTML='<div class="halo"></div><svg viewBox="0 0 64 64"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5eb0ff"/><stop offset="1" stop-color="#0a6cff"/></linearGradient></defs><path d="M32 6 C33.6 6 34.8 6.9 35.6 8.5 L50.5 49 C51.4 51.5 49 53.7 46.6 52.5 L32 44.6 L17.4 52.5 C15 53.7 12.6 51.5 13.5 49 L28.4 8.5 C29.2 6.9 30.4 6 32 6 Z" fill="url(#cg)" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke"/><path d="M32 14 L43 47 L32 41.5 Z" fill="rgba(255,255,255,.28)"/></svg>';return d;
+  d.innerHTML='<div class="cw"><div class="halo"></div><svg viewBox="0 0 64 64"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5eb0ff"/><stop offset="1" stop-color="#0a6cff"/></linearGradient></defs><path d="M32 6 C33.6 6 34.8 6.9 35.6 8.5 L50.5 49 C51.4 51.5 49 53.7 46.6 52.5 L32 44.6 L17.4 52.5 C15 53.7 12.6 51.5 13.5 49 L28.4 8.5 C29.2 6.9 30.4 6 32 6 Z" fill="url(#cg)" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke"/><path d="M32 14 L43 47 L32 41.5 Z" fill="rgba(255,255,255,.28)"/></svg></div>';return d;
 }
 function recenter(d){
   if(!nav||!nav.cam)return;const[sp,br]=nav.cam;
@@ -246,7 +247,7 @@ function beginNav(){
 function startNav(){
   if(!st.routes.length)return;
   beginNav();document.body.classList.add('nav');map.resize();drawPins();
-  car=new maplibregl.Marker({element:carEl(),pitchAlignment:'viewport',rotationAlignment:'viewport'}).setLngLat([st.org[1],st.org[0]]).addTo(map);
+  car=new maplibregl.Marker({element:carEl(),pitchAlignment:'viewport',rotationAlignment:'viewport'}).setLngLat([nav.r.pts[0][1],nav.r.pts[0][0]]).addTo(map);
   lastTouch=0;say('مسیریابی شروع شد',1);
   try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(x=>wl=x).catch(()=>{})}catch(e){}
   if(location.hash==='#sim'){let k=0;const p=nav.r.pts;sim=setInterval(()=>{k=Math.min(k+6,p.length-1);onPos({coords:{latitude:p[k][0],longitude:p[k][1],speed:14}})},700)}
