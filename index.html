@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#1c1c1e">
 <title>مسیر کار — تهران</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a84ff'/%3E%3Cpath d='M32 10 L46 50 L32 42 L18 50 Z' fill='%23fff'/%3E%3C/svg%3E">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -42,7 +43,7 @@ html,body{height:100%;margin:0;font-family:Vazirmatn,system-ui,Tahoma,sans-serif
 .car{width:78px;height:78px}
 .cw{position:relative;width:78px;height:78px}
 .car .halo{position:absolute;inset:8px;border-radius:50%;background:rgba(10,132,255,.28);animation:pulse 2s ease-out infinite}
-.car svg{position:absolute;inset:0;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))}
+.car svg{position:absolute;inset:0;overflow:visible;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))}
 @keyframes pulse{0%{transform:scale(.7);opacity:.9}100%{transform:scale(1.5);opacity:0}}
 /* حالت رانندگی — شبیه Apple Maps */
 #nb,#nf,#spd{display:none;position:fixed;z-index:1001;color:#fff}
@@ -87,6 +88,7 @@ body.nav .maplibregl-ctrl-bottom-right,body.nav .maplibregl-ctrl-bottom-left{dis
     <button class="chip on" id="zT">دوری از طرح ترافیک</button>
     <button class="chip on" id="zA">دوری از طرح کاهش آلودگی</button>
     <button class="chip" id="zS">نمایش محدوده‌ها</button>
+    <button class="chip" id="zC">رنگ ماشین <span id="cdot" style="display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:-1px;margin-inline-start:4px;border:1px solid rgba(128,128,128,.5)"></span></button>
   </div>
   <div class="msg" id="msg">مقصد را جستجو کنید، یا روی نقشه بزنید. مبدأ از GPS گرفته می‌شود.</div>
   <div class="routes" id="routes"></div>
@@ -236,7 +238,95 @@ function showLanes(m){
 }
 function carEl(){
   const d=document.createElement('div');d.className='car';
-  d.innerHTML='<div class="cw"><div class="halo"></div><svg viewBox="0 0 64 64"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5eb0ff"/><stop offset="1" stop-color="#0a6cff"/></linearGradient></defs><path d="M32 6 C33.6 6 34.8 6.9 35.6 8.5 L50.5 49 C51.4 51.5 49 53.7 46.6 52.5 L32 44.6 L17.4 52.5 C15 53.7 12.6 51.5 13.5 49 L28.4 8.5 C29.2 6.9 30.4 6 32 6 Z" fill="url(#cg)" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke"/><path d="M32 14 L43 47 L32 41.5 Z" fill="rgba(255,255,255,.28)"/></svg></div>';return d;
+  d.innerHTML='<div class="cw"><div class="halo"></div><svg viewBox="0 0 64 64"><defs><linearGradient id="cone" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#0a84ff" stop-opacity=".55"/><stop offset="1" stop-color="#0a84ff" stop-opacity="0"/></linearGradient><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5eb0ff"/><stop offset="1" stop-color="#0a6cff"/></linearGradient></defs><path d="M32 20 L4 -34 Q32 -48 60 -34 Z" fill="url(#cone)"/><path d="M32 6 C33.6 6 34.8 6.9 35.6 8.5 L50.5 49 C51.4 51.5 49 53.7 46.6 52.5 L32 44.6 L17.4 52.5 C15 53.7 12.6 51.5 13.5 49 L28.4 8.5 C29.2 6.9 30.4 6 32 6 Z" fill="url(#cg)" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke"/><path d="M32 14 L43 47 L32 41.5 Z" fill="rgba(255,255,255,.28)"/></svg></div>';return d;
+}
+let compass=null,lastApply=0;
+const smooth=(a,b)=>{const d=((b-a+540)%360)-180;return(a+d*.25+360)%360};
+function applyHeading(){
+  if(!nav||!car||compass==null)return;
+  if(nav.sp>2)return; // در حال حرکت: جهت مسیر/GPS پایدارتر است
+  car.setRotation(compass);
+}
+function onOrient(e){
+  let h=null;
+  if(e.webkitCompassHeading!=null)h=e.webkitCompassHeading;
+  else if(e.absolute&&e.alpha!=null&&e.beta!=null&&e.gamma!=null){
+    const r=Math.PI/180,a=e.alpha*r,b=e.beta*r,g=e.gamma*r;
+    const rA=-Math.cos(a)*Math.sin(g)-Math.sin(a)*Math.sin(b)*Math.cos(g),rB=-Math.sin(a)*Math.sin(g)+Math.cos(a)*Math.sin(b)*Math.cos(g);
+    h=Math.atan2(rA,rB)/r;if(h<0)h+=360;
+  }
+  if(h==null)return;
+  compass=compass==null?h:smooth(compass,h);
+  const t=Date.now();if(t-lastApply>80){lastApply=t;applyHeading()}
+}
+let compassOn=false;
+function initCompass(){ // باید داخل رویداد لمس صدا زده شود (iOS اجازه می‌خواهد)
+  if(compassOn)return;
+  const go=()=>{compassOn=true;addEventListener('deviceorientationabsolute',onOrient,true);addEventListener('deviceorientation',onOrient,true)};
+  if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function')
+    DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')go()}).catch(()=>{});
+  else go();
+}
+
+// ---------- ماشین سه‌بعدی (three.js روی MapLibre) ----------
+const CAR_COLORS=['#d92f2f','#f2b705','#2f6fe0','#2fa35a','#f4f4f4','#26262a'];
+const CAR_SCALE=4.5; // بزرگ‌نمایی نسبت به اندازهٔ واقعی، مثل Google Maps
+let ci=+(localStorage.getItem('carc')||0)%CAR_COLORS.length;
+$('cdot').style.background=CAR_COLORS[ci];
+$('zC').onclick=()=>{ci=(ci+1)%CAR_COLORS.length;localStorage.setItem('carc',ci);$('cdot').style.background=CAR_COLORS[ci]};
+function buildCar(T,color){
+  const g=new T.Group(),mat=(c)=>new T.MeshLambertMaterial({color:c,side:T.DoubleSide});
+  const ext=(pts,w,c,b)=>{const sh=new T.Shape();pts.forEach(([u,v],i)=>i?sh.lineTo(u,v):sh.moveTo(u,v));
+    const geo=new T.ExtrudeGeometry(sh,{depth:w,bevelEnabled:!!b,bevelSize:b||0,bevelThickness:b||0,bevelSegments:2});
+    geo.translate(0,0,-w/2);geo.applyMatrix4(new T.Matrix4().set(0,0,1,0, 1,0,0,0, 0,1,0,0, 0,0,0,1));
+    return new T.Mesh(geo,mat(c))};
+  g.add(ext([[-2.2,.35],[-2.2,.95],[-1.8,1.05],[1.4,1.05],[2.2,.8],[2.2,.35]],1.6,color,.1));      // بدنه
+  g.add(ext([[-1.3,1.05],[-.85,1.5],[.75,1.5],[1.3,1.05]],1.5,'#79b4ff',.04));                       // شیشه‌ها
+  g.add(ext([[-.95,1.46],[-.85,1.62],[.8,1.62],[.9,1.46]],1.58,color,.02));                          // سقف
+  const wh=new T.CylinderGeometry(.42,.42,.3,18);wh.rotateZ(Math.PI/2);
+  const hub=new T.CylinderGeometry(.22,.22,.32,12);hub.rotateZ(Math.PI/2);
+  [[-1,1.4],[1,1.4],[-1,-1.4],[1,-1.4]].forEach(([x,y])=>{
+    const w=new T.Mesh(wh,mat('#1b1b1d'));w.position.set(x*.95,y,.42);g.add(w);
+    const h=new T.Mesh(hub,mat('#b9bcc2'));h.position.set(x*.95,y,.42);g.add(h)});
+  const lamp=(c,x,y,z)=>{const m=new T.Mesh(new T.BoxGeometry(.4,.12,.2),new T.MeshBasicMaterial({color:c}));m.position.set(x,y,z);g.add(m)};
+  [-.6,.6].forEach(x=>{lamp('#fff6c8',x,2.32,.8);lamp('#ff3030',x,-2.32,.85)});
+  const sh=new T.Mesh(new T.PlaneGeometry(2.7,5.6),new T.MeshBasicMaterial({color:0,transparent:true,opacity:.28,depthWrite:false}));sh.position.z=.03;g.add(sh);
+  return g;
+}
+async function loadCar3d(o){
+  const T=await import('three');
+  if(o.dead)return;
+  let cx=null,cy=0,ch=o.hd;
+  const layer={id:'car3d',type:'custom',renderingMode:'3d',
+    onAdd(m,gl){
+      this.cam=new T.Camera();this.sc=new T.Scene();
+      this.sc.add(new T.AmbientLight(0xffffff,1.15));
+      const dl=new T.DirectionalLight(0xffffff,1.5);dl.position.set(-30,-40,80);this.sc.add(dl);
+      this.g=buildCar(T,CAR_COLORS[ci]);this.sc.add(this.g);
+      this.r=new T.WebGLRenderer({canvas:m.getCanvas(),context:gl,antialias:true});this.r.autoClear=false;
+    },
+    render(gl,matrix){
+      const mc=maplibregl.MercatorCoordinate.fromLngLat([o.lng,o.lat],0),u=mc.meterInMercatorCoordinateUnits();
+      if(cx===null||Math.hypot(mc.x-cx,mc.y-cy)/u>150){cx=mc.x;cy=mc.y;ch=o.hd}   // پرش بزرگ: بدون لغزش
+      cx+=(mc.x-cx)*.18;cy+=(mc.y-cy)*.18;                                        // لغزش نرم
+      ch=(ch+(((o.hd-ch+540)%360)-180)*.2+360)%360;
+      const s=u*CAR_SCALE;
+      this.g.rotation.z=-ch*Math.PI/180;
+      const l=new T.Matrix4().makeTranslation(cx,cy,0).scale(new T.Vector3(s,-s,s));
+      this.cam.projectionMatrix=new T.Matrix4().fromArray(matrix).multiply(l);
+      this.r.resetState();this.r.render(this.sc,this.cam);
+      map.triggerRepaint();
+    }};
+  if(!map.getLayer('car3d'))map.addLayer(layer);
+}
+function createCar(ll){
+  const o={lng:ll[1],lat:ll[0],hd:0,mk:null,dead:false,
+    setLngLat(a){this.lng=a[0];this.lat=a[1];if(this.mk)this.mk.setLngLat(a)},
+    setRotation(d){this.hd=d;if(this.mk)this.mk.setRotation(d)},
+    remove(){this.dead=true;if(this.mk)this.mk.remove();if(map.getLayer('car3d'))map.removeLayer('car3d')}};
+  loadCar3d(o).catch(()=>{ // اگر WebGL/بارگذاری نشد، همان فلش دوبعدی
+    if(o.dead)return;o.mk=new maplibregl.Marker({element:carEl(),pitchAlignment:'map',rotationAlignment:'map'}).setLngLat([o.lng,o.lat]).setRotation(o.hd).addTo(map)});
+  return o;
 }
 function recenter(d){
   if(!nav||!nav.cam)return;const[sp,br]=nav.cam;
@@ -253,8 +343,9 @@ function beginNav(){
 }
 function startNav(){
   if(!st.routes.length)return;
+  initCompass();
   beginNav();document.body.classList.add('nav');map.resize();drawPins();
-  car=new maplibregl.Marker({element:carEl(),pitchAlignment:'map',rotationAlignment:'map'}).setLngLat([nav.r.pts[0][1],nav.r.pts[0][0]]).addTo(map);
+  car=createCar(nav.r.pts[0]);
   lastTouch=0;say('مسیریابی شروع شد',1);
   try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(x=>wl=x).catch(()=>{})}catch(e){}
   if(location.hash==='#sim'){let k=0;const p=nav.r.pts;sim=setInterval(()=>{k=Math.min(k+6,p.length-1);onPos({coords:{latitude:p[k][0],longitude:p[k][1],speed:14}})},700)}
@@ -277,7 +368,7 @@ function onPos(p){
   }
   if(best>60){ // خارج از مسیر: نشانگر روی GPS واقعی می‌ماند و مسیر جدید گرفته می‌شود
     st.org=ll;const hd=(p.coords.heading>=0&&p.coords.speed>1)?p.coords.heading:lastBr;lastBr=hd;
-    car.setLngLat([ll[1],ll[0]]);car.setRotation(hd);nav.cam=[ll,hd];
+    nav.sp=p.coords.speed||0;car.setLngLat([ll[1],ll[0]]);car.setRotation(compass!=null&&nav.sp<=2?compass:hd);nav.cam=[ll,hd];
     if(Date.now()-lastTouch>5000)recenter(900);
     $('sv').textContent=fa(Math.round((p.coords.speed||0)*3.6));
     if((p.coords.accuracy||0)<100&&++nav.off>=2&&!nav.busy&&Date.now()-nav.lastRe>8000){
@@ -293,7 +384,8 @@ function onPos(p){
   const sp=[pts[bk][0]+bt*(pts[bk+1][0]-pts[bk][0]),pts[bk][1]+bt*(pts[bk+1][1]-pts[bk][1])];
   let j=bk+1;while(j<n-1&&hav(sp,pts[j])<20)j++;
   const br=brg(sp,pts[j]);lastBr=br;
-  car.setLngLat([sp[1],sp[0]]);car.setRotation(br);
+  nav.sp=p.coords.speed||0;
+  car.setLngLat([sp[1],sp[0]]);if(compass==null||nav.sp>2)car.setRotation(br);else car.setRotation(compass);
   nav.cam=[sp,br];
   if(Date.now()-lastTouch>5000)recenter(900);
   // راهنما
