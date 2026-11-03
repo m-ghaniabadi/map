@@ -88,6 +88,7 @@ body.nav .maplibregl-ctrl-bottom-right,body.nav .maplibregl-ctrl-bottom-left{dis
     <button class="chip on" id="zT">دوری از طرح ترافیک</button>
     <button class="chip on" id="zA">دوری از طرح کاهش آلودگی</button>
     <button class="chip" id="zS">نمایش محدوده‌ها</button>
+    <button class="chip" id="zI">جهت ژیروسکوپ: عادی</button>
     <button class="chip" id="zC">رنگ ماشین <span id="cdot" style="display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:-1px;margin-inline-start:4px;border:1px solid rgba(128,128,128,.5)"></span></button>
   </div>
   <div class="msg" id="msg">مقصد را جستجو کنید، یا روی نقشه بزنید. مبدأ از GPS گرفته می‌شود.</div>
@@ -240,7 +241,7 @@ function carEl(){
   const d=document.createElement('div');d.className='car';
   d.innerHTML='<div class="cw"><div class="halo"></div><svg viewBox="0 0 64 64"><defs><linearGradient id="cone" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#0a84ff" stop-opacity=".55"/><stop offset="1" stop-color="#0a84ff" stop-opacity="0"/></linearGradient><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5eb0ff"/><stop offset="1" stop-color="#0a6cff"/></linearGradient></defs><path d="M32 20 L4 -34 Q32 -48 60 -34 Z" fill="url(#cone)"/><path d="M32 6 C33.6 6 34.8 6.9 35.6 8.5 L50.5 49 C51.4 51.5 49 53.7 46.6 52.5 L32 44.6 L17.4 52.5 C15 53.7 12.6 51.5 13.5 49 L28.4 8.5 C29.2 6.9 30.4 6 32 6 Z" fill="url(#cg)" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke"/><path d="M32 14 L43 47 L32 41.5 Z" fill="rgba(255,255,255,.28)"/></svg></div>';return d;
 }
-let compass=null,lastApply=0;
+let compass=null,lastApply=0,compassInv=localStorage.getItem('cinv')==='1';
 const smooth=(a,b)=>{const d=((b-a+540)%360)-180;return(a+d*.25+360)%360};
 function applyHeading(){
   if(!nav||!car||compass==null)return;
@@ -251,10 +252,14 @@ function onOrient(e){
   let h=null;
   if(e.webkitCompassHeading!=null)h=e.webkitCompassHeading;
   else if(e.absolute&&e.alpha!=null&&e.beta!=null&&e.gamma!=null){
-    const r=Math.PI/180,a=e.alpha*r,b=e.beta*r,g=e.gamma*r;
-    const rA=-Math.cos(a)*Math.sin(g)-Math.sin(a)*Math.sin(b)*Math.cos(g),rB=-Math.sin(a)*Math.sin(g)+Math.cos(a)*Math.sin(b)*Math.cos(g);
-    h=Math.atan2(rA,rB)/r;if(h<0)h+=360;
+    // جهت افقیِ «پشت گوشی» (وقتی گوشی ایستاده است) یا «بالای گوشی» (وقتی خوابیده است)؛ هرکدام قوی‌تر بود
+    const r=Math.PI/180,A=e.alpha*r,B=e.beta*r,G=e.gamma*r;
+    const bx=-Math.cos(A)*Math.sin(G)-Math.sin(A)*Math.sin(B)*Math.cos(G),by=-Math.sin(A)*Math.sin(G)+Math.cos(A)*Math.sin(B)*Math.cos(G);
+    const tx=-Math.sin(A)*Math.cos(B),ty=Math.cos(A)*Math.cos(B);
+    const[hx,hy]=Math.hypot(bx,by)>=Math.hypot(tx,ty)?[bx,by]:[tx,ty];
+    h=Math.atan2(hx,hy)/r;if(h<0)h+=360;
   }
+  if(h!=null&&compassInv)h=(360-h)%360;
   if(h==null)return;
   compass=compass==null?h:smooth(compass,h);
   const t=Date.now();if(t-lastApply>80){lastApply=t;applyHeading()}
@@ -273,6 +278,8 @@ const CAR_COLORS=['#d92f2f','#f2b705','#2f6fe0','#2fa35a','#f4f4f4','#26262a'];
 const CAR_SCALE=4.5; // بزرگ‌نمایی نسبت به اندازهٔ واقعی، مثل Google Maps
 let ci=+(localStorage.getItem('carc')||0)%CAR_COLORS.length;
 $('cdot').style.background=CAR_COLORS[ci];
+const setInv=()=>{$('zI').textContent='جهت ژیروسکوپ: '+(compassInv?'معکوس':'عادی');$('zI').classList.toggle('on',compassInv)};setInv();
+$('zI').onclick=()=>{compassInv=!compassInv;localStorage.setItem('cinv',compassInv?'1':'0');compass=null;setInv()};
 $('zC').onclick=()=>{ci=(ci+1)%CAR_COLORS.length;localStorage.setItem('carc',ci);$('cdot').style.background=CAR_COLORS[ci]};
 function buildCar(T,color){
   const g=new T.Group(),mat=(c)=>new T.MeshLambertMaterial({color:c,side:T.DoubleSide});
